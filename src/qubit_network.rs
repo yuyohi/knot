@@ -1,5 +1,5 @@
 use rand::distributions::Distribution;
-use rand::{rngs::SmallRng, SeedableRng};
+use rand::{rngs::SmallRng, SeedableRng, Rng};
 use statrs::distribution::Normal;
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -248,7 +248,17 @@ impl QubitNetwork {
 
 pub enum ErrorDistribution {
     Equal(f64),
-    TruncNormal { mean: f64, std_dev: f64, seed: u64 },
+    TruncNormal {
+        mean: f64,
+        std_dev: f64,
+        seed: u64,
+    },
+    InsertingDefect {
+        error_rate: f64,
+        inserting_defect_rate: f64,
+        defect_rate: f64,
+        seed: u64,
+    },
 }
 
 impl ErrorDistribution {
@@ -256,6 +266,7 @@ impl ErrorDistribution {
         match self {
             Self::Equal(p) => *p,
             Self::TruncNormal { mean, .. } => *mean,
+            Self::InsertingDefect { error_rate, .. } => *error_rate,
         }
     }
 
@@ -272,13 +283,36 @@ impl ErrorDistribution {
                 let rng = SmallRng::seed_from_u64(*seed);
                 Generator::TruncNormal { distribution, rng }
             }
+            Self::InsertingDefect {
+                error_rate,
+                inserting_defect_rate,
+                defect_rate,
+                seed,
+            } => {
+                let rng = SmallRng::seed_from_u64(*seed);
+                Generator::InsertingDefect {
+                    error_rate: *error_rate,
+                    inserting_defect_rate: *inserting_defect_rate,
+                    defect_rate: *defect_rate,
+                    rng,
+                }
+            }
         }
     }
 }
 
 pub enum Generator {
     Equal(f64),
-    TruncNormal { distribution: Normal, rng: SmallRng },
+    TruncNormal {
+        distribution: Normal,
+        rng: SmallRng,
+    },
+    InsertingDefect {
+        error_rate: f64,
+        inserting_defect_rate: f64,
+        defect_rate: f64,
+        rng: SmallRng,
+    },
 }
 
 impl Generator {
@@ -292,6 +326,18 @@ impl Generator {
                     p = distribution.sample(rng);
                 }
                 p
+            }
+            Self::InsertingDefect {
+                error_rate,
+                inserting_defect_rate,
+                defect_rate,
+                rng,
+            } => {
+                if rng.gen::<f64>() < *inserting_defect_rate {
+                    *defect_rate
+                } else {
+                    *error_rate
+                }
             }
         }
     }

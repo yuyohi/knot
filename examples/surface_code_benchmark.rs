@@ -1,10 +1,10 @@
+use indicatif::ProgressBar;
 use knot::qec_code::rotated_surface_code::RotatedSurfaceCode;
 use knot::qubit_network::ErrorDistribution;
-use indicatif::ProgressBar;
 
 fn main() {
     let loop_num = 10000;
-    let distance = [5, 7];
+    let distance = [5, 7, 9];
     let error_rate = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08];
     let std_dev = 0.005;
     let seed = 1;
@@ -23,9 +23,16 @@ fn main() {
             let bar = ProgressBar::new(loop_num);
 
             for i in 0..loop_num {
+                /*
                 let distribution = ErrorDistribution::TruncNormal {
                     mean: p,
                     std_dev,
+                    seed: i,
+                }; */
+                let distribution = ErrorDistribution::InsertingDefect {
+                    error_rate: p,
+                    inserting_defect_rate: 0.05,
+                    defect_rate: p + 0.05,
                     seed: i,
                 };
                 let mut code = RotatedSurfaceCode::new(d, d, distribution, p, i);
